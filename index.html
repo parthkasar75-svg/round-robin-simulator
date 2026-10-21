@@ -76,6 +76,29 @@
           </div>
         </div>
 
+        <!-- Ready Queue State After Every Time Quantum -->
+        <div class="sub-section">
+          <div class="section-header">
+            <h2 class="section-title">Ready Queue State (After Every Time Quantum)</h2>
+          </div>
+          <div class="table-container">
+            <table class="data-table queue-table" id="queue-table">
+              <thead>
+                <tr>
+                  <th style="width: 10%;">Step</th>
+                  <th style="width: 12%;">Time ($t$)</th>
+                  <th style="width: 18%;">CPU Execution</th>
+                  <th style="width: 35%;">Ready Queue (Head &rarr; Tail)</th>
+                  <th style="width: 25%;">Event Details</th>
+                </tr>
+              </thead>
+              <tbody id="queue-table-body">
+                <!-- Ready queue snapshots rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Results Table -->
         <div class="sub-section">
           <h2 class="section-title">Calculation Results</h2>

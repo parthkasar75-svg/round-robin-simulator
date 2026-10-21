@@ -214,6 +214,66 @@ body {
   font-size: 13.5px;
 }
 
+/* Ready Queue Table & Visualization */
+.queue-table td {
+  font-size: 13.5px;
+  vertical-align: middle;
+}
+
+.queue-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.queue-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.queue-pill-rem {
+  font-size: 11px;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.queue-arrow {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+  user-select: none;
+}
+
+.queue-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.exec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+
 /* Buttons & Controls */
 .btn {
   display: inline-flex;

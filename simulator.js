@@ -31,6 +31,7 @@ const timeQuantumInput = document.getElementById("time-quantum");
 const errorMessageDiv = document.getElementById("error-message");
 const resultsSection = document.getElementById("results-section");
 const resultsTableBody = document.getElementById("results-table-body");
+const queueTableBody = document.getElementById("queue-table-body");
 const ganttBar = document.getElementById("gantt-bar");
 const ganttTimeline = document.getElementById("gantt-timeline");
 const ganttLegend = document.getElementById("gantt-legend");
@@ -224,6 +225,7 @@ function getValidatedInputs() {
 
 /**
  * Preemptive Round Robin CPU Scheduling Algorithm
+ * Tracks both execution timeline and ready queue state after each quantum
  */
 function runRoundRobinAlgorithm(processes, quantum) {
   const n = processes.length;
@@ -251,7 +253,9 @@ function runRoundRobinAlgorithm(processes, quantum) {
   let completed = 0;
   const readyQueue = [];
   const gantt = [];
+  const queueSnapshots = [];
   let arrivalIndex = 0;
+  let stepNumber = 1;
 
   // Helper to push all processes that have arrived by targetTime into the ready queue
   function enqueueNewArrivals(targetTime) {
@@ -273,12 +277,23 @@ function runRoundRobinAlgorithm(processes, quantum) {
   }
   enqueueNewArrivals(currentTime);
 
+  // Snapshot at initial time
+  queueSnapshots.push({
+    step: 0,
+    time: currentTime,
+    runningProcess: null,
+    execDuration: 0,
+    readyQueue: readyQueue.map(p => ({ id: p.id, remainingTime: p.remainingTime })),
+    event: `Initial queue populated with processes arrived by t = ${currentTime}`
+  });
+
   // Main execution loop
   while (completed < n) {
     if (readyQueue.length === 0) {
       // CPU is idle; advance time to next process arrival
       const nextProc = sortedArrivals[arrivalIndex];
       if (nextProc && nextProc.arrivalTime > currentTime) {
+        const idleDuration = nextProc.arrivalTime - currentTime;
         gantt.push({
           id: "IDLE",
           startTime: currentTime,
@@ -286,8 +301,21 @@ function runRoundRobinAlgorithm(processes, quantum) {
           isIdle: true
         });
         currentTime = nextProc.arrivalTime;
+        const arrivalsBefore = arrivalIndex;
+        enqueueNewArrivals(currentTime);
+        const newlyArrived = sortedArrivals.slice(arrivalsBefore, arrivalIndex).map(p => p.id);
+
+        queueSnapshots.push({
+          step: stepNumber++,
+          time: currentTime,
+          runningProcess: "IDLE",
+          execDuration: idleDuration,
+          readyQueue: readyQueue.map(p => ({ id: p.id, remainingTime: p.remainingTime })),
+          event: `CPU idle for ${idleDuration} units. ${newlyArrived.join(", ")} arrived at t = ${currentTime}.`
+        });
+      } else {
+        enqueueNewArrivals(currentTime);
       }
-      enqueueNewArrivals(currentTime);
       continue;
     }
 
@@ -314,18 +342,40 @@ function runRoundRobinAlgorithm(processes, quantum) {
 
     // Enqueue processes arriving during or exactly at the end of this quantum
     // BEFORE re-enqueuing the preempted current process
+    const prevArrivalIndex = arrivalIndex;
     enqueueNewArrivals(currentTime);
+    const newArrivals = sortedArrivals.slice(prevArrivalIndex, arrivalIndex).map(p => p.id);
 
+    let eventDesc = "";
     if (currentProc.remainingTime > 0) {
       // Preempted: place back at the end of the ready queue
       readyQueue.push(currentProc);
+      eventDesc = `${currentProc.id} executed for ${execDuration}u (rem: ${currentProc.remainingTime}). `;
+      if (newArrivals.length > 0) {
+        eventDesc += `Newly arrived ${newArrivals.join(", ")} queued before ${currentProc.id}. `;
+      }
+      eventDesc += `${currentProc.id} returned to queue tail.`;
     } else {
       // Process finished execution
       currentProc.completionTime = currentTime;
       currentProc.turnaroundTime = currentProc.completionTime - currentProc.arrivalTime;
       currentProc.waitingTime = currentProc.turnaroundTime - currentProc.burstTime;
       completed++;
+      eventDesc = `${currentProc.id} executed for ${execDuration}u and completed at t = ${currentTime}.`;
+      if (newArrivals.length > 0) {
+        eventDesc += ` ${newArrivals.join(", ")} arrived and joined ready queue.`;
+      }
     }
+
+    // Record snapshot of ready queue after this quantum
+    queueSnapshots.push({
+      step: stepNumber++,
+      time: currentTime,
+      runningProcess: currentProc.id,
+      execDuration: execDuration,
+      readyQueue: readyQueue.map(p => ({ id: p.id, remainingTime: p.remainingTime })),
+      event: eventDesc
+    });
   }
 
   // Preserve input order for results table
@@ -343,6 +393,7 @@ function runRoundRobinAlgorithm(processes, quantum) {
   return {
     results,
     gantt,
+    queueSnapshots,
     avgTurnaround,
     avgWaiting,
     avgResponse,
@@ -438,6 +489,87 @@ function renderGanttChart(gantt, totalTime, processes) {
 }
 
 /**
+ * Render the Ready Queue State Table after every time quantum
+ */
+function renderQueueTable(queueSnapshots, processes) {
+  if (!queueTableBody) return;
+  queueTableBody.innerHTML = "";
+
+  const colorMap = new Map();
+  processes.forEach((p, idx) => {
+    colorMap.set(p.id, getProcessColor(idx));
+  });
+
+  queueSnapshots.forEach((snap) => {
+    const tr = document.createElement("tr");
+
+    // Column 1: Step
+    const tdStep = document.createElement("td");
+    tdStep.innerHTML = snap.step === 0 ? "<strong>Start</strong>" : `<strong>Step ${snap.step}</strong>`;
+
+    // Column 2: Time (t)
+    const tdTime = document.createElement("td");
+    tdTime.textContent = `t = ${snap.time}`;
+
+    // Column 3: CPU Execution
+    const tdExec = document.createElement("td");
+    if (snap.step === 0) {
+      tdExec.textContent = "—";
+    } else if (snap.runningProcess === "IDLE") {
+      const badge = document.createElement("span");
+      badge.className = "exec-badge";
+      badge.textContent = `IDLE (${snap.execDuration}u)`;
+      tdExec.appendChild(badge);
+    } else {
+      const badge = document.createElement("span");
+      badge.className = "exec-badge";
+      badge.style.borderLeft = `4px solid ${colorMap.get(snap.runningProcess)}`;
+      badge.textContent = `${snap.runningProcess} (${snap.execDuration}u)`;
+      tdExec.appendChild(badge);
+    }
+
+    // Column 4: Ready Queue State (Head -> Tail)
+    const tdQueue = document.createElement("td");
+    if (snap.readyQueue.length === 0) {
+      const emptySpan = document.createElement("span");
+      emptySpan.className = "queue-empty";
+      emptySpan.textContent = "(Queue Empty)";
+      tdQueue.appendChild(emptySpan);
+    } else {
+      const queueDiv = document.createElement("div");
+      queueDiv.className = "queue-display";
+      snap.readyQueue.forEach((item, idx) => {
+        const pill = document.createElement("span");
+        pill.className = "queue-pill";
+        pill.style.backgroundColor = colorMap.get(item.id);
+        pill.innerHTML = `${item.id} <span class="queue-pill-rem">(rem: ${item.remainingTime})</span>`;
+        queueDiv.appendChild(pill);
+
+        if (idx < snap.readyQueue.length - 1) {
+          const arrow = document.createElement("span");
+          arrow.className = "queue-arrow";
+          arrow.innerHTML = "&rarr;";
+          queueDiv.appendChild(arrow);
+        }
+      });
+      tdQueue.appendChild(queueDiv);
+    }
+
+    // Column 5: Event Details
+    const tdEvent = document.createElement("td");
+    tdEvent.textContent = snap.event;
+
+    tr.appendChild(tdStep);
+    tr.appendChild(tdTime);
+    tr.appendChild(tdExec);
+    tr.appendChild(tdQueue);
+    tr.appendChild(tdEvent);
+
+    queueTableBody.appendChild(tr);
+  });
+}
+
+/**
  * Render the Results Table and Summary Averages
  */
 function renderResultsTable(results, avgTat, avgWt, avgRt) {
@@ -499,6 +631,7 @@ function handleRunSimulation() {
   const simulation = runRoundRobinAlgorithm(processes, quantum);
 
   renderGanttChart(simulation.gantt, simulation.totalTime, processes);
+  renderQueueTable(simulation.queueSnapshots, processes);
   renderResultsTable(
     simulation.results,
     simulation.avgTurnaround,

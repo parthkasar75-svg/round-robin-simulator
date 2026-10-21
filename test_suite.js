@@ -28,6 +28,8 @@ function runRoundRobinAlgorithm(processes, quantum) {
   const readyQueue = [];
   const gantt = [];
   let arrivalIndex = 0;
+  let stepNumber = 1;
+  const queueSnapshots = [];
 
   function enqueueNewArrivals(targetTime) {
     while (arrivalIndex < sortedArrivals.length && sortedArrivals[arrivalIndex].arrivalTime <= targetTime) {
@@ -47,10 +49,20 @@ function runRoundRobinAlgorithm(processes, quantum) {
   }
   enqueueNewArrivals(currentTime);
 
+  queueSnapshots.push({
+    step: 0,
+    time: currentTime,
+    runningProcess: null,
+    execDuration: 0,
+    readyQueue: readyQueue.map(p => ({ id: p.id, remainingTime: p.remainingTime })),
+    event: `Initial queue state at t = ${currentTime}`
+  });
+
   while (completed < n) {
     if (readyQueue.length === 0) {
       const nextProc = sortedArrivals[arrivalIndex];
       if (nextProc && nextProc.arrivalTime > currentTime) {
+        const idleDuration = nextProc.arrivalTime - currentTime;
         gantt.push({
           id: "IDLE",
           startTime: currentTime,
@@ -58,8 +70,21 @@ function runRoundRobinAlgorithm(processes, quantum) {
           isIdle: true
         });
         currentTime = nextProc.arrivalTime;
+        const arrivalsBefore = arrivalIndex;
+        enqueueNewArrivals(currentTime);
+        const newlyArrived = sortedArrivals.slice(arrivalsBefore, arrivalIndex).map(p => p.id);
+
+        queueSnapshots.push({
+          step: stepNumber++,
+          time: currentTime,
+          runningProcess: "IDLE",
+          execDuration: idleDuration,
+          readyQueue: readyQueue.map(p => ({ id: p.id, remainingTime: p.remainingTime })),
+          event: `CPU idle for ${idleDuration} units. ${newlyArrived.join(", ")} arrived.`
+        });
+      } else {
+        enqueueNewArrivals(currentTime);
       }
-      enqueueNewArrivals(currentTime);
       continue;
     }
 
@@ -81,16 +106,30 @@ function runRoundRobinAlgorithm(processes, quantum) {
       isIdle: false
     });
 
+    const prevArrivalIndex = arrivalIndex;
     enqueueNewArrivals(currentTime);
+    const newArrivals = sortedArrivals.slice(prevArrivalIndex, arrivalIndex).map(p => p.id);
 
+    let eventDesc = "";
     if (currentProc.remainingTime > 0) {
       readyQueue.push(currentProc);
+      eventDesc = `${currentProc.id} executed for ${execDuration}u (rem: ${currentProc.remainingTime}). Preempted to queue tail.`;
     } else {
       currentProc.completionTime = currentTime;
       currentProc.turnaroundTime = currentProc.completionTime - currentProc.arrivalTime;
       currentProc.waitingTime = currentProc.turnaroundTime - currentProc.burstTime;
       completed++;
+      eventDesc = `${currentProc.id} executed for ${execDuration}u and completed at t = ${currentTime}.`;
     }
+
+    queueSnapshots.push({
+      step: stepNumber++,
+      time: currentTime,
+      runningProcess: currentProc.id,
+      execDuration: execDuration,
+      readyQueue: readyQueue.map(p => ({ id: p.id, remainingTime: p.remainingTime })),
+      event: eventDesc
+    });
   }
 
   const results = processes.map(p => procMap.get(p.id));
@@ -101,6 +140,7 @@ function runRoundRobinAlgorithm(processes, quantum) {
   return {
     results,
     gantt,
+    queueSnapshots,
     avgTurnaround: totalTat / n,
     avgWaiting: totalWt / n,
     avgResponse: totalRt / n,
@@ -155,6 +195,39 @@ assert(Math.abs(sim1.avgResponse - 1.00) < 0.001, "Average Response Time should 
 const gantt1Seq = sim1.gantt.map(g => `${g.id}[${g.startTime}-${g.endTime}]`).join(", ");
 console.log("  Gantt Order:", gantt1Seq);
 assert(gantt1Seq === "P1[0-2], P2[2-4], P3[4-6], P1[6-8], P2[8-10], P1[10-11]", "Gantt chart order matches textbook");
+
+// Verify Ready Queue after each quantum
+console.log("\n  Checking Ready Queue Transitions:");
+const snaps1 = sim1.queueSnapshots;
+assert(snaps1.length === 7, `7 Ready queue snapshots recorded (got ${snaps1.length})`);
+
+const qAt0 = snaps1[0].readyQueue.map(p => p.id).join(",");
+assert(qAt0 === "P1", "Initial queue at t=0 has [P1]");
+
+const qAt2 = snaps1[1].readyQueue.map(p => p.id).join(",");
+console.log("    t=2 queue:", qAt2);
+assert(qAt2 === "P2,P3,P1", "Queue after Quantum 1 (t=2) is [P2, P3, P1]");
+
+const qAt4 = snaps1[2].readyQueue.map(p => p.id).join(",");
+console.log("    t=4 queue:", qAt4);
+assert(qAt4 === "P3,P1,P2", "Queue after Quantum 2 (t=4) is [P3, P1, P2]");
+
+const qAt6 = snaps1[3].readyQueue.map(p => p.id).join(",");
+console.log("    t=6 queue:", qAt6);
+assert(qAt6 === "P1,P2", "Queue after Quantum 3 (t=6) is [P1, P2] (P3 finished)");
+
+const qAt8 = snaps1[4].readyQueue.map(p => p.id).join(",");
+console.log("    t=8 queue:", qAt8);
+assert(qAt8 === "P2,P1", "Queue after Quantum 4 (t=8) is [P2, P1]");
+
+const qAt10 = snaps1[5].readyQueue.map(p => p.id).join(",");
+console.log("    t=10 queue:", qAt10);
+assert(qAt10 === "P1", "Queue after Quantum 5 (t=10) is [P1] (P2 finished)");
+
+const qAt11 = snaps1[6].readyQueue.map(p => p.id).join(",");
+console.log("    t=11 queue:", qAt11 || "(Empty)");
+assert(qAt11 === "", "Queue after final Quantum 6 (t=11) is empty");
+
 
 console.log("\n=== TEST SUITE 2: CPU Idle Period ===");
 const sim2 = runRoundRobinAlgorithm([

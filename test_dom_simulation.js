@@ -138,6 +138,15 @@ if (resultsBody.children.length === 3) {
   console.log("PASS: 3 result rows created in Results Table");
 }
 
+const queueBody = document.getElementById("queue-table-body");
+console.log(`Ready Queue rows count: ${queueBody.children.length}`);
+if (queueBody.children.length === 7) {
+  console.log("PASS: 7 Ready Queue transition rows displayed in Ready Queue table");
+} else {
+  console.error("FAIL: Ready Queue rows count mismatch: got " + queueBody.children.length);
+}
+
+
 const avgTat = document.getElementById("avg-tat").textContent;
 const avgWt = document.getElementById("avg-wt").textContent;
 const avgRt = document.getElementById("avg-rt").textContent;
