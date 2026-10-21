@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Round Robin CPU Scheduling Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Academic Header -->
+    <header class="app-header">
+      <h1 class="app-title">Round Robin CPU Scheduling Simulator</h1>
+      <p class="app-subtitle">Operating Systems &bull; Preemptive CPU Scheduling Algorithm</p>
+    </header>
+
+    <main class="main-content">
+      <!-- Error Message Banner -->
+      <div id="error-message" class="error-banner" style="display: none;" role="alert"></div>
+
+      <!-- Configuration & Process Input Section -->
+      <section class="section-container" aria-labelledby="input-heading">
+        <div class="section-header">
+          <h2 id="input-heading" class="section-title">Process Configuration</h2>
+          <div class="quantum-control">
+            <label for="time-quantum" class="quantum-label">Time Quantum:</label>
+            <input type="number" id="time-quantum" class="input-field quantum-input" min="1" step="1" value="2" placeholder="e.g. 2">
+          </div>
+        </div>
+
+        <!-- Process Input Table -->
+        <div class="table-container">
+          <table class="data-table" id="process-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Process ID</th>
+                <th style="width: 30%;">Arrival Time</th>
+                <th style="width: 30%;">Burst Time</th>
+                <th style="width: 15%; text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="process-table-body">
+              <!-- Rows inserted dynamically or by sample loader -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-actions">
+          <button type="button" id="btn-add-process" class="btn btn-secondary">
+            + Add Process
+          </button>
+        </div>
+
+        <!-- Simulation Control Buttons -->
+        <div class="controls-bar">
+          <button type="button" id="btn-run" class="btn btn-primary">Run Simulation</button>
+          <button type="button" id="btn-load-example" class="btn btn-secondary">Load Example</button>
+          <button type="button" id="btn-reset" class="btn btn-outline">Reset</button>
+        </div>
+      </section>
+
+      <!-- Simulation Output Section -->
+      <section id="results-section" class="section-container" style="display: none;" aria-labelledby="results-heading">
+        <!-- Gantt Chart -->
+        <div class="sub-section">
+          <div class="section-header">
+            <h2 id="results-heading" class="section-title">Gantt Chart</h2>
+            <div id="gantt-legend" class="gantt-legend"></div>
+          </div>
+          
+          <div class="gantt-outer-container">
+            <div id="gantt-chart-wrapper" class="gantt-chart-wrapper">
+              <div id="gantt-bar" class="gantt-bar"></div>
+              <div id="gantt-timeline" class="gantt-timeline"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="sub-section">
+          <h2 class="section-title">Calculation Results</h2>
+          <div class="table-container">
+            <table class="data-table results-table" id="results-table">
+              <thead>
+                <tr>
+                  <th>Process ID</th>
+                  <th>Arrival Time</th>
+                  <th>Burst Time</th>
+                  <th>Completion Time</th>
+                  <th>Turnaround Time</th>
+                  <th>Waiting Time</th>
+                  <th>Response Time</th>
+                </tr>
+              </thead>
+              <tbody id="results-table-body">
+                <!-- Calculated results rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Averages Summary -->
+          <div class="metrics-summary">
+            <div class="metric-item">
+              <span class="metric-label">Average Turnaround Time:</span>
+              <span id="avg-tat" class="metric-value">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Average Waiting Time:</span>
+              <span id="avg-wt" class="metric-value">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Average Response Time:</span>
+              <span id="avg-rt" class="metric-value">-</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Simple Academic Footer -->
+    <footer class="app-footer">
+      <p>Operating Systems Simulator &bull; Round Robin (RR) Algorithm</p>
+    </footer>
+  </div>
+
+  <script src="simulator.js"></script>
+</body>
+</html>
