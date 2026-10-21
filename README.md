@@ -22,7 +22,12 @@ A clean, minimalist, academic web application designed for Operating Systems cou
    - Visualizes CPU idle time when no process is ready in the queue.
    - Uses distinct academic colors for each process and neutral gray for idle slots.
 
-4. **Results Table & Performance Metrics**:
+4. **Ready Queue State Tracker (After Every Time Quantum)**:
+   - Tracks the exact contents of the ready queue after each quantum time slice.
+   - Shows active execution, process badges with remaining burst times, transition arrows (Head &rarr; Tail), and event descriptions.
+   - Accurately demonstrates preemption ordering (new arrivals entering the queue before the preempted process).
+
+5. **Results Table & Performance Metrics**:
    - Displays calculated values for each process:
      - **Completion Time ($CT$)**: Time at which execution completes.
      - **Turnaround Time ($TAT = CT - AT$)**: Total time from arrival to completion.
@@ -32,6 +37,7 @@ A clean, minimalist, academic web application designed for Operating Systems cou
      - **Average Turnaround Time**
      - **Average Waiting Time**
      - **Average Response Time**
+
 
 ---
 
